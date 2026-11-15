@@ -13,6 +13,7 @@ def uri(path, mime):
 
 T = T.replace("{{LOGO_FLAM}}", uri(A / "logos" / "flam.png", "image/png"))
 T = T.replace("{{LOGO_MOE}}", uri(A / "logos" / "moe-white.png", "image/png"))
+T = T.replace("{{QR_AIRBOARD}}", uri(A / "images" / "airboard_qr.png", "image/png"))
 T = T.replace("{{URL_KIOSK}}", "https://ministry-of-education.lovable.app/")
 T = T.replace("{{URL_VOICE}}", "https://app.talk.flamapp.ai/share?project_id=6af922481bce0dcfc34e72e5&amp;client_key=ak_nyhsc5ttq9hp8md")
 T = T.replace("{{URL_FLICKS}}", "https://storage.googleapis.com/bucket-fi-development-apps-5b0640d5/app/abc/videos/ug867d5xx2b0xykctp70knhu.html")

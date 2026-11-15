@@ -300,6 +300,15 @@ a{color:inherit}
 .dev[data-mode="app"] .say{left:14px;right:14px;bottom:18px;gap:10px}
 .dev[data-mode="app"] .say .b{min-width:0!important;flex:1;padding:12px 14px}
 .dev[data-mode="app"] .mic{width:48px;height:48px;border-radius:24px}
+.abplay{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(11,18,32,.35);border:0;width:100%;cursor:pointer;transition:background .3s}
+.abplay .ic{width:96px;height:96px;border-radius:48px;background:var(--sand);color:#1A1208;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 0 rgba(227,180,124,.7);animation:glow 1.8s ease-out infinite;transition:opacity .3s,transform .3s}
+.abplay .lb{font-size:18px;font-weight:600;color:var(--ivory);text-shadow:0 2px 8px rgba(0,0,0,.6);transition:opacity .3s}
+.abplay .i-pause{display:none}
+.abplay.playing{background:transparent}
+.abplay.playing .ic{animation:none;opacity:0;transform:scale(.85)}
+.abplay.playing .lb{opacity:0}
+.abplay.playing .i-play{display:none}.abplay.playing .i-pause{display:block}
+.abplay.playing:hover .ic{opacity:.9;transform:none}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
 </style>
 </head>
@@ -585,7 +594,8 @@ a{color:inherit}
     <div class="phone" data-a style="--d:2;left:860px;top:0">
       <div class="scr">
         <div class="notch"></div>
-        <video id="abVideo" muted loop playsinline autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none"></video>
+        <video id="abVideo" playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;background:#0F1626"></video>
+        <button id="abPlay" class="abplay" aria-label="Play the Airboard recording" style="display:none"><span class="ic"><svg class="i-play" viewBox="0 0 24 24" width="38" height="38" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></span><span class="lb">Play the recording</span></button>
         <div class="vph" id="abPh">
           <div class="play"><svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
           <div style="color:var(--ivory);font-weight:600;font-size:21px">Airboard recording</div>
@@ -781,7 +791,7 @@ a{color:inherit}
 /* ===== Drop-in media for the Airboards slide =====
    Put a video file path or URL in airboardVideo (e.g. "airboard.mp4" next to this file)
    and the QR image path in airboardQR (e.g. "airboard-qr.png"). Leave "" to show placeholders. */
-const CONFIG = { airboardVideo: "", airboardQR: "" };
+const CONFIG = { airboardVideo: "https://storage.googleapis.com/bucket-fi-production-apps-0672ab2d/original/videos/l15w62hdw8zmse05sbl45tm9.mp4", airboardQR: "{{QR_AIRBOARD}}" };
 
 const DEMOS = {
   kiosk:  { title: "Kiosk journey · Visual Agent", url: "{{URL_KIOSK}}" },
@@ -871,7 +881,14 @@ function startCall(slide){ const el=slide.querySelector('.calltime'); if(!el) re
   else if(now<end) el.textContent='Under way · 28 Nov – 12 Dec 2026'; })();
 
 /* Airboards media */
-(function(){ if(CONFIG.airboardVideo){ const v=document.getElementById('abVideo'); v.src=CONFIG.airboardVideo; v.style.display='block'; document.getElementById('abPh').style.display='none'; }
+(function(){ if(CONFIG.airboardVideo){
+    const v=document.getElementById('abVideo'), btn=document.getElementById('abPlay');
+    v.src=CONFIG.airboardVideo; v.autoplay=false; v.loop=false; v.muted=false; v.pause();
+    v.style.display='block'; btn.style.display='flex'; document.getElementById('abPh').style.display='none';
+    const sync=()=>{ const on=!v.paused&&!v.ended; btn.classList.toggle('playing',on); btn.setAttribute('aria-label', on?'Pause the recording':'Play the recording'); };
+    btn.addEventListener('click',()=>{ if(v.paused||v.ended){ v.play().catch(()=>{}); } else { v.pause(); } });
+    v.addEventListener('play',sync); v.addEventListener('pause',sync); v.addEventListener('ended',()=>{ v.currentTime=0; sync(); });
+  }
   if(CONFIG.airboardQR){ document.getElementById('abQR').innerHTML='<div class="box"><img src="'+CONFIG.airboardQR+'" alt="Experience QR code" style="width:100%;height:100%;object-fit:contain"></div>'; } })();
 
 /* Navigation */
@@ -880,7 +897,8 @@ const where=document.getElementById('where');
 function go(n){
   n=Math.max(0,Math.min(slides.length-1,n)); if(n===cur) return;
   if(cur>=0){ const old=slides[cur]; old.classList.remove('on'); old.querySelectorAll('.cyc').forEach(c=>cyclers.get(c).stop());
-    old.querySelectorAll('iframe[data-src]').forEach(f=>{ f.removeAttribute('src'); }); }
+    old.querySelectorAll('iframe[data-src]').forEach(f=>{ f.removeAttribute('src'); });
+    old.querySelectorAll('video').forEach(v=>{ if(!v.muted) v.pause(); }); }
   cur=n; const s=slides[n]; s.classList.add('on');
   s.querySelectorAll('.cyc').forEach(c=>cyclers.get(c).start());
   s.querySelectorAll('iframe[data-src]').forEach(f=>{ f.src=f.dataset.src; });
@@ -914,7 +932,7 @@ const VOICE_DOC = '<!DOCTYPE html><html><head><meta charset="utf-8">'
  + 'setTimeout(function(){if(!ready()){clearInterval(t);st.textContent="The voice agent did not load here. Check the internet connection, and that this site\\u2019s domain is allowed for the project in Flam Talk. Or use Open in a new tab.";}},12000);'
  + '})();<\/script>'
  + '</body></html>';
-function openDemo(k){ const d=DEMOS[k]; document.getElementById('mTitle').textContent=d.title; document.getElementById('mOpen').href=d.url;
+function openDemo(k){ document.querySelectorAll('video').forEach(v=>{ if(!v.muted) v.pause(); }); const d=DEMOS[k]; document.getElementById('mTitle').textContent=d.title; document.getElementById('mOpen').href=d.url;
   if(d.sdk){ mFrame.removeAttribute('src'); mFrame.srcdoc=VOICE_DOC; } else { mFrame.removeAttribute('srcdoc'); mFrame.src=d.url; }
   modal.classList.add('open'); }
 function closeDemo(){ modal.classList.remove('open'); mFrame.removeAttribute('srcdoc'); mFrame.src='about:blank'; }
